@@ -115,7 +115,7 @@ export default function App() {
   return (
     <div className="container">
       <header>
-        <h1>Antigravity Eats</h1>
+        <h1>FoodieHub</h1>
         <p>Premium food delivery at your fingertips.</p>
       </header>
 
