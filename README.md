@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Restaurant Delivery System (PostgreSQL)
 
 This project includes:
@@ -58,3 +59,6 @@ Frontend runs at `http://localhost:5173`.
 - `GET /api/restaurants/:restaurantId/menu`
 - `POST /api/orders`
 - `GET /api/orders/:orderId/tracking`
+=======
+This is our dbms project
+>>>>>>> 7d95112409a875560997ad4058c248a6d0e7a057
