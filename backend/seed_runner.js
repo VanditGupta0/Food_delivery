@@ -12,10 +12,10 @@ async function seed() {
         await client.connect();
         console.log('Connected to database');
 
-        const sqlPath = path.join(__dirname, 'sql/seed.sql');
+        const sqlPath = path.join(__dirname, 'sql/init.sql');
         const sql = fs.readFileSync(sqlPath, 'utf8');
 
-        console.log('Executing seed.sql...');
+        console.log('Executing init.sql...');
         await client.query(sql);
         console.log('Database seeded successfully!');
     } catch (err) {

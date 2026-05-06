@@ -15,7 +15,7 @@ CREATE DATABASE restaurant_delivery;
 Run schema + sample data:
 
 ```bash
-psql -U postgres -d restaurant_delivery -f backend/sql/schema.sql
+psql -U postgres -d restaurant_delivery -f backend/sql/init.sql
 ```
 
 ## 2) Run Backend

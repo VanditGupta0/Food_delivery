@@ -135,8 +135,12 @@ app.get("/api/orders/:orderId/tracking", async (req, res) => {
     const deliveryResult = await query(
       `SELECT od.order_id, od.status AS order_status, od.amount,
               ds.delivery_id, ds.status AS delivery_status, ds.driver_id,
-              d.name AS driver_name, d.phone_no AS driver_phone
+              d.name AS driver_name, d.phone_no AS driver_phone,
+              rl.latitude AS res_lat, rl.longitude AS res_lng,
+              ca.latitude AS cus_lat, ca.longitude AS cus_lng
        FROM order_details od
+       LEFT JOIN restaurant_location rl ON rl.restaurant_id = od.restaurant_id
+       LEFT JOIN customer_address ca ON ca.address_id = od.delivery_address_id
        LEFT JOIN delivery_status ds ON ds.order_id = od.order_id
        LEFT JOIN driver d ON d.driver_id = ds.driver_id
        WHERE od.order_id = $1`,
@@ -163,6 +167,86 @@ app.get("/api/orders/:orderId/tracking", async (req, res) => {
     }
 
     res.json({ ...order, latest_location: latestLocation });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// New endpoints for remaining tables
+app.get("/api/customers", async (_req, res) => {
+  try {
+    const result = await query("SELECT * FROM customer ORDER BY customer_id");
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get("/api/drivers", async (_req, res) => {
+  try {
+    const result = await query("SELECT * FROM driver ORDER BY driver_id");
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get("/api/admins", async (_req, res) => {
+  try {
+    const result = await query("SELECT * FROM admin ORDER BY admin_id");
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get("/api/ratings", async (_req, res) => {
+  try {
+    const result = await query(`
+      SELECT r.*, c.name as customer_name, rest.name as restaurant_name 
+      FROM rating r
+      JOIN customer c ON r.customer_id = c.customer_id
+      JOIN restaurant rest ON r.restaurant_id = rest.restaurant_id
+      ORDER BY r.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get("/api/payments", async (_req, res) => {
+  try {
+    const result = await query("SELECT * FROM payment_details ORDER BY time DESC");
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get("/api/categories", async (_req, res) => {
+  try {
+    const result = await query(`
+      SELECT c.*, r.name as restaurant_name 
+      FROM category c
+      JOIN restaurant r ON c.restaurant_id = r.restaurant_id
+      ORDER BY c.category_id
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get("/api/addresses", async (_req, res) => {
+  try {
+    const result = await query(`
+      SELECT ca.*, c.name as customer_name 
+      FROM customer_address ca
+      JOIN customer c ON ca.customer_id = c.customer_id
+      ORDER BY ca.address_id
+    `);
+    res.json(result.rows);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

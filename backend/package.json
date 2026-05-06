@@ -1,7 +1,7 @@
 {
-  "name": "restaurant-delivery-backend",
+  "name": "foodiehub-backend",
   "version": "1.0.0",
-  "description": "Backend API for Restaurant Delivery System",
+  "description": "Backend API for FoodieHub Delivery System",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {

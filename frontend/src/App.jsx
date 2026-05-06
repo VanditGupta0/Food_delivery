@@ -4,6 +4,7 @@ import "./styles.css";
 const API_BASE = "http://localhost:5000/api";
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState("order");
   const [restaurants, setRestaurants] = useState([]);
   const [restaurantId, setRestaurantId] = useState("");
   const [menu, setMenu] = useState([]);
@@ -12,27 +13,55 @@ export default function App() {
   const [trackingOrderId, setTrackingOrderId] = useState("");
   const [trackingData, setTrackingData] = useState(null);
   const [error, setError] = useState("");
+  
+  // Data for remaining tables
+  const [customers, setCustomers] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [admins, setAdmins] = useState([]);
+  const [ratings, setRatings] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [addresses, setAddresses] = useState([]);
 
   useEffect(() => {
     fetch(`${API_BASE}/restaurants`)
       .then((res) => res.json())
       .then((data) => {
         setRestaurants(data);
-        if (data.length > 0) setRestaurantId(String(data[0].restaurant_id));
+        if (data.length > 0 && !restaurantId) setRestaurantId(String(data[0].restaurant_id));
       })
       .catch((err) => setError(err.message));
   }, []);
 
   useEffect(() => {
-    if (!restaurantId) return;
-    fetch(`${API_BASE}/restaurants/${restaurantId}/menu`)
-      .then((res) => res.json())
-      .then((data) => {
-        setMenu(data);
-        setSelectedItems({});
-      })
-      .catch((err) => setError(err.message));
-  }, [restaurantId]);
+    if (activeTab === "order" && restaurantId) {
+      fetch(`${API_BASE}/restaurants/${restaurantId}/menu`)
+        .then((res) => res.json())
+        .then((data) => setMenu(data))
+        .catch((err) => setError(err.message));
+    } else if (activeTab === "customers") {
+      fetchData("customers", setCustomers);
+    } else if (activeTab === "drivers") {
+      fetchData("drivers", setDrivers);
+    } else if (activeTab === "admins") {
+      fetchData("admins", setAdmins);
+    } else if (activeTab === "ratings") {
+      fetchData("ratings", setRatings);
+    } else if (activeTab === "payments") {
+      fetchData("payments", setPayments);
+    } else if (activeTab === "categories") {
+      fetchData("categories", setCategories);
+    } else if (activeTab === "addresses") {
+      fetchData("addresses", setAddresses);
+    }
+  }, [activeTab, restaurantId]);
+
+  const fetchData = (endpoint, setter) => {
+    fetch(`${API_BASE}/${endpoint}`)
+      .then(res => res.json())
+      .then(data => setter(data))
+      .catch(err => setError(err.message));
+  };
 
   const total = useMemo(() => {
     return Object.values(selectedItems).reduce((sum, item) => sum + item.subtotal, 0);
@@ -75,7 +104,7 @@ export default function App() {
     try {
       setError("");
       const payload = {
-        customer_id: 1, // Static for demo
+        customer_id: 1,
         restaurant_id: Number(restaurantId),
         delivery_address_id: 1,
         payment_mode: "upi",
@@ -95,6 +124,7 @@ export default function App() {
       setOrderResponse(data);
       setTrackingOrderId(String(data.order_id));
       setSelectedItems({});
+      setActiveTab("order");
     } catch (err) {
       setError(err.message);
     }
@@ -112,15 +142,8 @@ export default function App() {
     }
   };
 
-  return (
-    <div className="container">
-      <header>
-        <h1>Antigravity Eats</h1>
-        <p>Premium food delivery at your fingertips.</p>
-      </header>
-
-      {error && <div className="error card" style={{padding: '1rem', marginBottom: '2rem'}}>{error}</div>}
-
+  const renderOrderTab = () => (
+    <>
       <div className="restaurant-selector">
         <select value={restaurantId} onChange={(e) => setRestaurantId(e.target.value)}>
           {restaurants.map((r) => (
@@ -150,14 +173,12 @@ export default function App() {
                       type="number"
                       className="qty-input"
                       min="1"
+                      style={{width: '60px', padding: '0.5rem', borderRadius: '8px', border: '1px solid #ddd'}}
                       value={selectedItems[item.item_code].quantity}
                       onChange={(e) => updateQuantity(item.item_code, e.target.value)}
                     />
                   ) : (
-                    <button className="btn-add" onClick={() => toggleItem(item)}>Add to Cart</button>
-                  )}
-                  {selectedItems[item.item_code] && (
-                    <button className="btn-add" style={{background: '#ff4757'}} onClick={() => toggleItem(item)}>×</button>
+                    <button className="btn-add" onClick={() => toggleItem(item)}>Add</button>
                   )}
                 </div>
               </div>
@@ -166,50 +187,98 @@ export default function App() {
         ))}
       </div>
 
-      <div className="checkout-section">
-        <div>
-          <h2 style={{margin: 0}}>Total: <span className="price">Rs {total.toFixed(2)}</span></h2>
-          <p style={{margin: 0, color: 'var(--text-muted)'}}>{Object.keys(selectedItems).length} items in cart</p>
-        </div>
-        <button
-          className="checkout-btn"
-          onClick={placeOrder}
-          disabled={Object.keys(selectedItems).length === 0}
-        >
-          Proceed to Checkout
-        </button>
-      </div>
-
-      {orderResponse && (
-        <div className="success card" style={{padding: '1.5rem', marginTop: '2rem', textAlign: 'center'}}>
-           🎉 Order placed successfully! <strong>Order ID: #{orderResponse.order_id}</strong>
+      {Object.keys(selectedItems).length > 0 && (
+        <div className="checkout-section">
+          <div>
+            <h2 style={{margin: 0}}>Total: Rs {total.toFixed(2)}</h2>
+            <p style={{margin: 0, opacity: 0.8}}>{Object.keys(selectedItems).length} items in cart</p>
+          </div>
+          <button className="checkout-btn" onClick={placeOrder}>Place Order</button>
         </div>
       )}
 
-      <section className="tracking-section">
-        <h2>📦 Track Your Order</h2>
+      {orderResponse && (
+        <div className="success" style={{marginTop: '2rem'}}>
+          🎉 Order #{orderResponse.order_id} placed! Tracking enabled below.
+        </div>
+      )}
+
+      <section className="tracking-section card" style={{marginTop: '3rem'}}>
+        <h2>📦 Track Order</h2>
         <div className="tracking-form">
           <input
             type="number"
             className="input-field"
-            placeholder="Enter Order ID (e.g. 1)"
+            placeholder="Order ID"
             value={trackingOrderId}
             onChange={(e) => setTrackingOrderId(e.target.value)}
           />
-          <button className="btn-add" style={{padding: '0 2rem'}} onClick={fetchTracking}>Track</button>
+          <button className="btn-add" onClick={fetchTracking}>Track</button>
         </div>
         {trackingData && (
-          <div className="card" style={{padding: '1.5rem'}}>
-            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1rem'}}>
-              <span className="status-badge">{trackingData.order_status}</span>
-              <span className="price">Order #{trackingData.order_id}</span>
-            </div>
-            <p><strong>Driver:</strong> {trackingData.driver_name || "Assigning..."}</p>
+          <div style={{marginTop: '1rem'}}>
+            <p><strong>Status:</strong> <span className="status-badge">{trackingData.order_status}</span></p>
+            <p><strong>Driver:</strong> {trackingData.driver_name || "Searching..."}</p>
             <p><strong>Phone:</strong> {trackingData.driver_phone || "N/A"}</p>
-            <p><strong>Delivery Status:</strong> {trackingData.delivery_status || "Processing"}</p>
           </div>
         )}
       </section>
+    </>
+  );
+
+  const renderTable = (headers, rows, keyField) => (
+    <div className="table-container">
+      <table>
+        <thead>
+          <tr>{headers.map(h => <th key={h}>{h}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map(row => (
+            <tr key={row[keyField]}>
+              {headers.map(h => {
+                const val = row[h.toLowerCase().replace(/ /g, '_')];
+                if (h.toLowerCase() === 'status') {
+                   return <td key={h}><span className={`status-badge status-${val}`}>{val}</span></td>;
+                }
+                return <td key={h}>{String(val || 'N/A')}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  return (
+    <div className="container">
+      <header>
+        <h1>FoodieHub</h1>
+        <p>Advanced Management System for Food Delivery</p>
+      </header>
+
+      <div className="nav-tabs">
+        <button className={`nav-tab ${activeTab === 'order' ? 'active' : ''}`} onClick={() => setActiveTab('order')}>🛒 Orders</button>
+        <button className={`nav-tab ${activeTab === 'customers' ? 'active' : ''}`} onClick={() => setActiveTab('customers')}>👥 Customers</button>
+        <button className={`nav-tab ${activeTab === 'drivers' ? 'active' : ''}`} onClick={() => setActiveTab('drivers')}>🛵 Drivers</button>
+        <button className={`nav-tab ${activeTab === 'admins' ? 'active' : ''}`} onClick={() => setActiveTab('admins')}>🔑 Admins</button>
+        <button className={`nav-tab ${activeTab === 'ratings' ? 'active' : ''}`} onClick={() => setActiveTab('ratings')}>⭐ Ratings</button>
+        <button className={`nav-tab ${activeTab === 'payments' ? 'active' : ''}`} onClick={() => setActiveTab('payments')}>💰 Payments</button>
+        <button className={`nav-tab ${activeTab === 'categories' ? 'active' : ''}`} onClick={() => setActiveTab('categories')}>📂 Categories</button>
+        <button className={`nav-tab ${activeTab === 'addresses' ? 'active' : ''}`} onClick={() => setActiveTab('addresses')}>📍 Addresses</button>
+      </div>
+
+      {error && <div className="error" style={{marginBottom: '2rem'}}>{error}</div>}
+
+      <main>
+        {activeTab === 'order' && renderOrderTab()}
+        {activeTab === 'customers' && renderTable(['Customer ID', 'Name', 'Email', 'Phone No', 'Created At'], customers, 'customer_id')}
+        {activeTab === 'drivers' && renderTable(['Driver ID', 'Name', 'Phone No', 'Status', 'Updated At'], drivers, 'driver_id')}
+        {activeTab === 'admins' && renderTable(['Admin ID', 'Name', 'Created At'], admins, 'admin_id')}
+        {activeTab === 'ratings' && renderTable(['Rating ID', 'Customer Name', 'Restaurant Name', 'Rating Value', 'Review Text'], ratings, 'rating_id')}
+        {activeTab === 'payments' && renderTable(['Payment ID', 'Order ID', 'Amount', 'Mode', 'Status', 'Time'], payments, 'payment_id')}
+        {activeTab === 'categories' && renderTable(['Category ID', 'Restaurant Name', 'Name', 'Created At'], categories, 'category_id')}
+        {activeTab === 'addresses' && renderTable(['Address ID', 'Customer Name', 'Full Address', 'Address Type', 'Is Default'], addresses, 'address_id')}
+      </main>
     </div>
   );
 }
